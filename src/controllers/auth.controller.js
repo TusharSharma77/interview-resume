@@ -1,6 +1,7 @@
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const tokenBlacklistModel = require('../models/blacklist.model');
 require('dotenv').config();
 async function registerUserController(req, res) {
   const { username, email, password } = req.body;
@@ -56,4 +57,13 @@ async function loginUserController(req, res) {
  res.status(200).json({ message: "User logged in successfully", token });
 }
 
-module.exports = { registerUserController, loginUserController };
+
+async function logoutUserController(req, res) {
+  const token = req.cookies.token
+  if(token){
+     await tokenBlacklistModel.create({token})
+  }
+  res.clearCookie("token")
+  res.status(200).json({ message: "User logged out successfully" });
+}
+module.exports = { registerUserController, loginUserController, logoutUserController };
