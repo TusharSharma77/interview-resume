@@ -1,0 +1,17 @@
+.button {
+        width: fit-content;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 9999px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    
+   
+    &:active{
+        transform: scale(0.98);
+    }
+}
+ .primary-button {
+        background: #e1034d;
+        color: #fff;
+    }
