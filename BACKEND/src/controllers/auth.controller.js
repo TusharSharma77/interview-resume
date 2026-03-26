@@ -29,7 +29,7 @@ async function registerUserController(req, res) {
 
  }
  , process.env.JWT_SECRET, { expiresIn: "1d" })
- res.cookie("token", token)
+  res.cookie("token", token, { httpOnly: true, sameSite: "lax" })
     res.status(201).json({ message: "User registered successfully", token });
 }
 async function loginUserController(req, res) {
@@ -53,7 +53,7 @@ async function loginUserController(req, res) {
 
  }
  , process.env.JWT_SECRET, { expiresIn: "1d" })
- res.cookie("token", token)
+  res.cookie("token", token, { httpOnly: true, sameSite: "lax" })
  res.status(200).json({ message: "User logged in successfully", token });
 }
 
@@ -63,7 +63,7 @@ async function logoutUserController(req, res) {
   if(token){
      await tokenBlacklistModel.create({token})
   }
-  res.clearCookie("token")
+  res.clearCookie("token", { httpOnly: true, sameSite: "lax" })
   res.status(200).json({ message: "User logged out successfully" });
 }
 

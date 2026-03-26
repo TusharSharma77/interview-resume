@@ -8,7 +8,7 @@ const tokenBlacklistModel = require('../models/blacklist.model');
       message: "Unauthorized"
     });
   }
-  const isBlacklisted = tokenBlacklistModel.findOne({ token})
+  const isBlacklisted = await tokenBlacklistModel.findOne({ token})
 if(isBlacklisted){
   return res.status(401).json({
     message: "Unauthorized"
