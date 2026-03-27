@@ -5,7 +5,16 @@ This project is a full-stack interview preparation web app. A user can register,
 The project is split into:
 
 - `FRONTEND/` for the React + Vite client
-- `BACKEND/` for the Express + MongoDB API
+- `BACKEND/` for the Express + MongoDB 
+
+- <img width="722" height="783" alt="image" src="https://github.com/user-attachments/assets/5586c711-5219-480a-bfdd-a6bbeff8166b" />
+
+<img width="863" height="837" alt="image" src="https://github.com/user-attachments/assets/11456217-b006-4583-9126-f7f9c2664ef9" />
+
+
+<img width="926" height="895" alt="Screenshot 2026-03-27 115017" src="https://github.com/user-attachments/assets/48062302-82b3-4692-b905-4ed69d080376" />
+
+  
 
 ## What The App Does
 
