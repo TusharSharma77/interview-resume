@@ -1,3 +1,5 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 const {GoogleGenAI} = require("@google/genai");
 const {z} = require("zod");
 const {zodToJsonSchema} = require("zod-to-json-schema");
@@ -37,18 +39,160 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+function trimText(value, maxChars) {
+  if (typeof value !== "string") return "";
+  return value.length > maxChars ? value.slice(0, maxChars) : value;
+}
+
+function toQuestions(items = []) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      if (typeof item === "string") {
+        return {
+          question: item,
+          intention: "Assess understanding and communication depth.",
+          answer: "Explain with clear structure, practical examples, and trade-offs.",
+        };
+      }
+      return {
+        question: item?.question || "",
+        intention: item?.intention || "Assess understanding and communication depth.",
+        answer: item?.answer || "Explain with clear structure, practical examples, and trade-offs.",
+      };
+    })
+    .filter((q) => q.question);
+}
+
+function normalizeMatchScore(value) {
+  if (typeof value === "number") return Math.max(0, Math.min(100, Math.round(value)));
+  if (typeof value === "string") {
+    const fraction = value.match(/(\d+)\s*\/\s*(\d+)/);
+    if (fraction) {
+      const num = Number(fraction[1]);
+      const den = Number(fraction[2]) || 10;
+      return Math.max(0, Math.min(100, Math.round((num / den) * 100)));
+    }
+    const num = Number(value.replace(/[^\d.]/g, ""));
+    if (!Number.isNaN(num)) {
+      return Math.max(0, Math.min(100, Math.round(num)));
+    }
+  }
+  return 60;
+}
+
+function toSkillGaps(items = []) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      if (typeof item === "string") {
+        return { skill: item, severity: "medium" };
+      }
+      const severity = ["low", "medium", "high"].includes(item?.severity) ? item.severity : "medium";
+      return { skill: item?.skill || "", severity };
+    })
+    .filter((s) => s.skill);
+}
+
+function toPreparationPlan(items = [], fallbackSkills = []) {
+  if (Array.isArray(items) && items.length > 0) {
+    return items.map((item, index) => ({
+      day: Number(item?.day) || index + 1,
+      focus: item?.focus || "Interview preparation",
+      tasks: Array.isArray(item?.tasks) && item.tasks.length > 0 ? item.tasks : ["Revise key topics and practice answers."],
+    }));
+  }
+
+  return [
+    {
+      day: 1,
+      focus: "Core concepts revision",
+      tasks: ["Review fundamentals from resume and job description.", "Prepare concise project explanations."],
+    },
+    {
+      day: 2,
+      focus: fallbackSkills[0]?.skill || "Technical practice",
+      tasks: ["Solve practical problems.", "Practice trade-off based answers."],
+    },
+    {
+      day: 3,
+      focus: "Mock interview",
+      tasks: ["Run a timed mock interview.", "Refine weak answers and examples."],
+    },
+  ];
+}
+
+function normalizeReportShape(raw) {
+  const technicalQuestions = toQuestions(raw?.technicalQuestions);
+  const behavioralQuestions = toQuestions(raw?.behavioralQuestions);
+  const skillGaps = toSkillGaps(raw?.skillGaps);
+  const safeTechnicalQuestions =
+    technicalQuestions.length > 0
+      ? technicalQuestions
+      : [
+          {
+            question: "How does the Node.js event loop handle async I/O?",
+            intention: "Assess backend runtime fundamentals.",
+            answer: "Explain phases, non-blocking I/O, and practical implications in APIs.",
+          },
+        ];
+  const safeBehavioralQuestions =
+    behavioralQuestions.length > 0
+      ? behavioralQuestions
+      : [
+          {
+            question: "Tell me about a production issue you owned end-to-end.",
+            intention: "Assess ownership and incident handling.",
+            answer: "Use STAR, include root cause, actions, and prevention steps.",
+          },
+        ];
+  const safeSkillGaps =
+    skillGaps.length > 0 ? skillGaps : [{ skill: "Event loop deep dive", severity: "medium" }];
+
+  return {
+    title: raw?.title || raw?.report_title || "Interview Report",
+    matchScore: normalizeMatchScore(raw?.matchScore),
+    technicalQuestions: safeTechnicalQuestions,
+    behavioralQuestions: safeBehavioralQuestions,
+    skillGaps: safeSkillGaps,
+    preparationPlan: toPreparationPlan(raw?.preparationPlan, safeSkillGaps),
+  };
+}
+
 async function generateInterviewReport({resume, selfDescription, jobDescription}){
-    const prompt =`Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
+    const compactResume = trimText(resume, 3000);
+    const compactSelfDescription = trimText(selfDescription, 500);
+    const compactJobDescription = trimText(jobDescription, 1200);
+
+    const prompt = `Return ONLY valid JSON for a very short interview summary.
+Keep all text brief.
+Use exactly 1 item in each array.
+Keep every answer to 1 short sentence.
+Schema:
+{
+  "matchScore": number (0-100),
+  "technicalQuestions": [{ "question": string, "intention": string, "answer": string }],
+  "behavioralQuestions": [{ "question": string, "intention": string, "answer": string }],
+  "skillGaps": [{ "skill": string, "severity": "low" | "medium" | "high" }],
+  "preparationPlan": [{ "day": number, "focus": string, "tasks": string[] }],
+  "title": string
+}
+
+Return ONLY valid JSON. No markdown, no extra keys.
+
+Candidate details:
+Resume: ${compactResume}
+Self Description: ${compactSelfDescription}
+Job Description: ${compactJobDescription}`;
+
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     contents: prompt,
     config: {
+      maxOutputTokens: 220,
+      temperature: 0.2,
       responseMimeType: "application/json",
-      responseJsonSchema: zodToJsonSchema(interviewReportSchema),
+      responseSchema: zodToJsonSchema(interviewReportSchema),
     },
   });
 
@@ -57,12 +201,17 @@ async function generateInterviewReport({resume, selfDescription, jobDescription}
     try {
       return JSON.parse(rawText);
     } catch {
-      return rawText;
+      throw new Error("Gemini returned non-JSON output.");
     }
   })();
 
-  console.log(parsed);
-  return parsed;
+  const normalized = normalizeReportShape(parsed);
+  const validated = interviewReportSchema.safeParse(normalized);
+  if (!validated.success) {
+    throw new Error("Gemini response did not match interview schema.");
+  }
+
+  return validated.data;
 }
 
 module.exports = {

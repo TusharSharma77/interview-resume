@@ -1,27 +1,47 @@
-const pdfParse = require('pdf-parse');
-const generateInterviewReport = require('../services/ai.service');
+const { PDFParse } = require('pdf-parse');
+const { generateInterviewReport } = require('../services/ai.service');
 const InterviewReportModel = require('../models/interviewReport.model');
 
 async function generateInterVieweportController(req, res) {
   try {
     const resumeFile = req.file;
+    const { selfDescription, jobDescription } = req.body;
 
-    const pdfData = await pdfParse(resumeFile.buffer);
+    if (!resumeFile) {
+      return res.status(400).json({
+        success: false,
+        message: "Resume PDF is required.",
+      });
+    }
+
+    if (!jobDescription || !selfDescription) {
+      return res.status(400).json({
+        success: false,
+        message: "Job description and self description are required.",
+      });
+    }
+
+    const parser = new PDFParse({ data: resumeFile.buffer });
+    const pdfData = await parser.getText();
+    await parser.destroy();
     const resumeContent = pdfData.text;
 
-    const { selfDescription, jobDescription } = req.body;
-    
     const interviewReportbyAi = await generateInterviewReport({
       resume: resumeContent,
       selfDescription,
       jobDescription
     });
+
     const interviewReport = await InterviewReportModel.create({
-      user: req.user.id,
+      user: req.user?.id || req.user?._id,
       resume: resumeContent,
       jobDescription,
       selfDescription,
-      ...interviewReportbyAi,
+      matchScore: interviewReportbyAi?.matchScore,
+      techinicalQuestions: interviewReportbyAi?.technicalQuestions || [],
+      behavioralQuestions: interviewReportbyAi?.behavioralQuestions || [],
+      skillGaps: interviewReportbyAi?.skillGaps || [],
+      preparationPlans: interviewReportbyAi?.preparationPlan || [],
     });
 
    
@@ -32,10 +52,10 @@ async function generateInterVieweportController(req, res) {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Interview generation failed:", error);
     res.status(500).json({
       success: false,
-      message: "Something went wrong"
+      message: error?.message || "Something went wrong"
     });
   }
 }

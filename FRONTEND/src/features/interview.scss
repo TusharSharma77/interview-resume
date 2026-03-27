@@ -1,0 +1,131 @@
+.interview-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #06080f;
+  color: #f4f4f5;
+}
+
+.interview-board {
+  width: min(1100px, 100%);
+  min-height: 620px;
+  border: 1px solid #b4b4b4;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  overflow: hidden;
+  background: #06080f;
+
+  &__left,
+  &__center,
+  &__right {
+    padding: 2rem 1.4rem;
+  }
+
+  &__left,
+  &__center {
+    border-right: 1px solid #8e8e8e;
+  }
+
+  &__left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    justify-content: center;
+  }
+
+  &__center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #f7f7f8;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.7rem;
+      color: #d4d4d8;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+  }
+
+  &__right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+
+    h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ececef;
+    }
+  }
+}
+
+.topic-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #e4e4e7;
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #ffffff;
+  }
+
+  &.is-active {
+    color: #ffffff;
+    text-decoration: underline;
+    text-decoration-color: #ef4444;
+    text-underline-offset: 5px;
+    text-decoration-thickness: 2px;
+  }
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: flex-start;
+}
+
+.gap-tag {
+  border: 1px solid #9f9fa9;
+  border-radius: 8px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.84rem;
+  color: #efeff1;
+  background: #090b12;
+}
+
+@media (max-width: 900px) {
+  .interview-board {
+    grid-template-columns: 1fr;
+    min-height: auto;
+
+    &__left,
+    &__center {
+      border-right: 0;
+      border-bottom: 1px solid #8e8e8e;
+    }
+
+    &__left {
+      justify-content: flex-start;
+    }
+  }
+}

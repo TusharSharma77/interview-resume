@@ -19,7 +19,7 @@ const Register = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <main>
+    <main className="auth-page">
       <div className="form-container">
         <h1>Register</h1>
         <form onSubmit={handleSubmit}>
